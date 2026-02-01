@@ -1,0 +1,79 @@
+name: Build Windows Portable (UI + backend)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------- Build backend.exe ----------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend.exe
+        working-directory: backend
+        run: |
+          pyinstaller --onefile --name backend main.py
+          dir dist
+
+      # ---------- Build Tauri app ----------
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install app deps
+        working-directory: app
+        run: npm install
+
+      - name: Build Tauri (Windows)
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: app
+          args: --verbose
+
+      # ---------- Package portable release ----------
+      - name: Create release folder
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+      - name: Copy backend.exe
+        run: |
+          Copy-Item backend\dist\backend.exe release\backend.exe
+
+      - name: Copy UI exe
+        run: |
+          $exe = Get-ChildItem -Path app\src-tauri\target\release -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw "UI exe not found in app/src-tauri/target/release" }
+          Copy-Item $exe.FullName release\GlassesTryOnStudio.exe
+
+      - name: Copy Start/Stop scripts
+        run: |
+          Copy-Item scripts\Start.bat release\Start.bat
+          Copy-Item scripts\Stop.bat release\Stop.bat
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlassesTryOnStudio-portable
+          path: release/**
