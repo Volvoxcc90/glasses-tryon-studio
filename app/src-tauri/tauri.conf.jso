@@ -1,0 +1,17 @@
+{
+  "productName": "GlassesTryOnStudio",
+  "version": "0.1.0",
+  "identifier": "com.tryon.studio",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "windows": [
+      { "title": "Glasses Try-On Studio", "width": 1400, "height": 900, "minWidth": 1200, "minHeight": 780 }
+    ],
+    "security": { "csp": null }
+  }
+}
